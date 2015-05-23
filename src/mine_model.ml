@@ -258,117 +258,111 @@ let draw_closed_cc wcf i j =
 type position = Left | Center | Right;;
 
 let draw_string_in_box pos str bcf col =
-     let (w, h) = Graphics.text_size str in
-     let ty = bcf.y + (bcf.h-h)/2 in
-     ( match pos with
-           Center -> Graphics.moveto (bcf.x + (bcf.w-w)/2) ty
-         | Right  -> let tx = bcf.x + bcf.w - w - bcf.bw - 1 in
-                     Graphics.moveto tx ty
-         | Left   -> let tx = bcf.x + bcf.bw + 1 in Graphics.moveto tx ty  );
-     Graphics.set_color col;
-     Graphics.draw_string str
+  let (w, h) = Graphics.text_size str in
+  let ty = bcf.y + (bcf.h-h)/2 in
+  begin match pos with
+  | Center -> Graphics.moveto (bcf.x + (bcf.w - w) / 2) ty
+  | Right -> let tx = bcf.x + bcf.w - w - bcf.bw - 1 in Graphics.moveto tx ty
+  | Left -> let tx = bcf.x + bcf.bw + 1 in Graphics.moveto tx ty end;
+  Graphics.set_color col;
+  Graphics.draw_string str
 
 let draw_num_cc wcf i j n =
   open_ccell wcf i j ;
   draw_box wcf.current_box ;
-  if n<>0 then draw_string_in_box Center (string_of_int n)
-                                  wcf.current_box Graphics.white
-
+  if n <> 0 then draw_string_in_box Center (string_of_int n)
+                                    wcf.current_box Graphics.white
 
 let draw_mine_cc wcf i j =
-  open_ccell wcf i j ;
-  let cc = wcf.current_box
-  in draw_box wcf.current_box ;
-     Graphics.set_color Graphics.black ;
-     Graphics.fill_circle (cc.x+cc.w/2) (cc.y+cc.h/2) (cc.h/3) ;;
+  open_ccell wcf i j;
+  let cc = wcf.current_box in
+  draw_box wcf.current_box;
+  Graphics.set_color Graphics.black;
+  Graphics.fill_circle (cc.x + cc.w/2) (cc.y + cc.h/2) (cc.h / 3)
 
 let draw_flag_cc wcf i j =
-  close_ccell wcf i j ;
-  draw_box wcf.current_box ;
-  draw_string_in_box Center "!" wcf.current_box Graphics.blue ;;
+  close_ccell wcf i j;
+  draw_box wcf.current_box;
+  draw_string_in_box Center "!" wcf.current_box Graphics.blue
 
 let draw_cross_cc wcf i j =
-  let x,y = wcf.cell (i,j)
-  and w,h = wcf.current_box.w, wcf.current_box.h in
-  let a=x+w/4 and b=x+3*w/4
-      and c=y+h/4 and d=y+3*h/4
-  in Graphics.set_color Graphics.red ;
-     Graphics.set_line_width 3 ;
-     Graphics.moveto a d ; Graphics.lineto b c ;
-     Graphics.moveto a c ; Graphics.lineto b d ;
-     Graphics.set_line_width 1;;
+  let x, y = wcf.cell (i, j) in
+  let w, h = wcf.current_box.w, wcf.current_box.h in
+  let a = x + w / 4 and b = x + 3 * w / 4 in
+  let c = y + h / 4 and d = y + 3 * h / 4 in
+  Graphics.set_color Graphics.red;
+  Graphics.set_line_width 3;
+  Graphics.moveto a d; Graphics.lineto b c;
+  Graphics.moveto a c; Graphics.lineto b d;
+  Graphics.set_line_width 1
 
 let draw_cell wcf bd i j =
-  let cell = bd.(i).(j)
-  in match (cell.flag, cell.seen , cell.mined ) with
-       ( true ,_,_) -> draw_flag_cc wcf i j
-     | (_, false ,_) -> draw_closed_cc wcf i j
-     | (_,_, true ) -> draw_mine_cc wcf i j
-     | _
-       -> draw_num_cc wcf i j cell.nbrs ;;
+  let cell = bd.(i).(j) in
+  match cell.flag, cell.seen, cell.mined with
+  | true, _, _ -> draw_flag_cc wcf i j
+  | _, false,_ -> draw_closed_cc wcf i j
+  | _, _, true -> draw_mine_cc wcf i j
+  | _ -> draw_num_cc wcf i j cell.nbrs ;;
 
 let draw_cell_end wcf bd i j =
-  let cell = bd.(i).(j)
-  in match (cell.flag, cell.mined ) with
-       ( true , true ) -> draw_flag_cc wcf i j
-     | ( true , false ) -> draw_num_cc wcf i j cell.nbrs; draw_cross_cc wcf i j
-     | ( false , true ) -> draw_mine_cc wcf i j
-     | ( false , false ) -> draw_num_cc wcf i j cell.nbrs
+  let cell = bd.(i).(j) in
+  match (cell.flag, cell.mined ) with
+  | true, true -> draw_flag_cc wcf i j
+  | true, false -> draw_num_cc wcf i j cell.nbrs; draw_cross_cc wcf i j
+  | false, true -> draw_mine_cc wcf i j
+  | false, false -> draw_num_cc wcf i j cell.nbrs
 
 let draw_flag_switch wcf on =
-  if on then wcf.flag_box.r <- Bot else wcf.flag_box.r <- Top ;
-  draw_box wcf.flag_box ;
+  if on then wcf.flag_box.r <- Bot else wcf.flag_box.r <- Top;
+  draw_box wcf.flag_box;
   if on then draw_string_in_box Center "ON" wcf.flag_box Graphics.red
-  else draw_string_in_box Center "OFF" wcf.flag_box Graphics.blue ;;
+  else draw_string_in_box Center "OFF" wcf.flag_box Graphics.blue
 
 let draw_flag_title wcf =
   let m = "Flagging" in
   let w,h = Graphics.text_size m in
-  let x = (wcf.main_box.w-w)/2
-  and y0 = wcf.dialog_box.y+wcf.dialog_box.h in
-  let y = y0+(wcf.main_box.h-(y0+h))/2
-  in Graphics.moveto x y ;
-     Graphics.draw_string m ;;
-
+  let x = (wcf.main_box.w - w) / 2 in
+  let y0 = wcf.dialog_box.y + wcf.dialog_box.h in
+  let y = y0 + (wcf.main_box.h - (y0 + h)) / 2
+  in Graphics.moveto x y; Graphics.draw_string m
 
 let print_score wcf nbcto nbfc =
-  erase_box wcf.d1_box ;
-  draw_string_in_box Center (string_of_int nbcto) wcf.d1_box Graphics.blue ;
-  erase_box wcf.d2_box ;
-  draw_string_in_box Center (string_of_int (wcf.cf.nmines-nbfc)) wcf.d2_box
-                     ( if nbfc>wcf.cf.nmines then Graphics.red else Graphics.blue ) ;;
+  erase_box wcf.d1_box;
+  draw_string_in_box Center (string_of_int nbcto) wcf.d1_box Graphics.blue;
+  erase_box wcf.d2_box;
+  draw_string_in_box Center (string_of_int (wcf.cf.nmines - nbfc)) wcf.d2_box @@
+    if nbfc > wcf.cf.nmines then Graphics.red else Graphics.blue
 
 (* todo get rid of this *)
 let iter_cells cf f =
   for i=0 to cf.ncols-1 do for j=0 to cf.nrows-1 do f (i,j) done done ;;
 
 let draw_field_initial wcf =
-  draw_closed_cc wcf 0 0 ;
+  draw_closed_cc wcf 0 0;
   let cc = wcf.current_box in
-  let bitmap = draw_box cc ; Graphics.get_image cc.x cc.y cc.w cc.h in
-  let draw_bitmap (i,j) = let x,y=wcf.cell (i,j)
-                          in Graphics.draw_image bitmap x y
-  in iter_cells wcf.cf draw_bitmap ;;
+  let bitmap = draw_box cc; Graphics.get_image cc.x cc.y cc.w cc.h in
+  let draw_bitmap (i,j) =
+    let x, y = wcf.cell (i, j) in Graphics.draw_image bitmap x y in
+  iter_cells wcf.cf draw_bitmap ;;
 
 let draw_field_end wcf bd =
-  iter_cells wcf.cf ( fun (i,j) -> draw_cell_end wcf bd i j) ;;
+  iter_cells wcf.cf @@ fun (i, j) -> draw_cell_end wcf bd i j
 
 let open_wcf wcf =
-  Graphics.open_graph ( " " ^ (string_of_int wcf.main_box.w) ^ "x" ^
-                          (string_of_int wcf.main_box.h)
-                      ) ;
-  draw_box wcf.main_box ;
-  draw_box wcf.dialog_box ;
-  draw_flag_switch wcf false ;
-  draw_box wcf.field_box ;
-  draw_field_initial wcf ;
-  draw_flag_title wcf ;
-  print_score wcf ((wcf.cf.nrows*wcf.cf.ncols)-wcf.cf.nmines) 0 ;;
-
+  Graphics.open_graph @@
+    " " ^ (string_of_int wcf.main_box.w) ^ "x" ^ (string_of_int wcf.main_box.h);
+  draw_box wcf.main_box;
+  draw_box wcf.dialog_box;
+  draw_flag_switch wcf false;
+  draw_box wcf.field_box;
+  draw_field_initial wcf;
+  draw_flag_title wcf;
+  print_score wcf (wcf.cf.nrows * wcf.cf.ncols - wcf.cf.nmines) 0
 
 (* TODO separate control *)
 
 exception End
+
 type clickon = Out | Cell of (int*int) | SelectBox ;;
 
 let locate_click wcf st1 st2 =
@@ -466,6 +460,6 @@ let create_minesw nb_c nb_r nb_m =
 
 let go nbc nbr nbm =
   let d = create_minesw nbc nbr nbm in
-  loop d (d_init d) d_key (d_mouse d) (d_end);;
+  try loop d (d_init d) d_key (d_mouse d) (d_end) with End -> ()
 
-let _ =go 10 10 10
+let _ = try go 10 10 10 with Graphics.Graphic_failure _ -> ()
