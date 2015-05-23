@@ -1,9 +1,9 @@
 # Simple makefile for now with no automatic dependency generation
 
-TARGET=mine_model
+TARGET=mine_main
 
 all: native
-	mv $(TARGET).native minesweeper
+	mv src/$(TARGET).native minesweeper
 
 native:
-	ocamlbuild -lib graphics src/$(TARGET).native
+	cd src/ && ocamlbuild -r -use-ocamlfind -lib graphics $(TARGET).native && cd ..
