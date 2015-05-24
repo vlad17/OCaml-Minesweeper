@@ -11,4 +11,7 @@ Brushing up on my OCaml
 
 ### Development Guide
 
-http://caml.inria.fr/pub/docs/oreilly-book/html/book-ora059.html
+The game is based on the tutorial from [INRIA](http://caml.inria.fr/pub/docs/oreilly-book/html/book-ora059.html).
+
+I've made some significant changes to the code, though the original model-view-controller outline is more or less the same.
+
