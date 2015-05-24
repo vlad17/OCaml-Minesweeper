@@ -8,6 +8,7 @@ Brushing up on my OCaml
 3. Clear up other todos
 4. Change building scheme (what does Jane Street use?)
 5. Add unit tests, just to show off
+6. Have a machine play (and show the moves as it guesses)
 
 ### Development Guide
 
