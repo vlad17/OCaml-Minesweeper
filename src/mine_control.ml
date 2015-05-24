@@ -61,12 +61,13 @@ let create_minesw nb_c nb_r nb_m =
     bd = init_board wcf.cf;
     cnt = { nflagged = 0; nhidden = cf.nrows * cf.ncols - cf.nmines } }
 
-(* get rid of these *)
+(* TODO get rid of these *)
 let d_init nbc nbr nbm =
   let d = create_minesw nbc nbr nbm in
-  open_wcf d.wcf; Mining, d
-let d_end () = Graphics.close_graph()
-let reset game = d_init game.wcf.cf.ncols  game.wcf.cf.nrows game.wcf.cf.nmines
+  open_fresh_wcf d.wcf; Mining, d
+let d_end () = Graphics.close_graph ()
+let reset game = d_end ();
+                 d_init game.wcf.cf.ncols  game.wcf.cf.nrows game.wcf.cf.nmines
 
 (* Key callback for minesweeper game *)
 let d_key gs c = match c with
@@ -74,15 +75,11 @@ let d_key gs c = match c with
   | 'r' | 'R' -> Continue, reset @@ snd gs
   | 'f' | 'F' ->
     let stage, game = gs in
-    let stage =
+    let stage, game =
       match fst gs with
-      | Mining ->
-         draw_flag_switch game.wcf true;
-         Flagging
-      | Flagging ->
-         draw_flag_switch game.wcf false;
-         Mining
-      | Terminal -> Terminal in
+      | Mining -> Flagging, { game with wcf = set_flagging game.wcf }
+      | Flagging -> Mining, { game with wcf = set_mining game.wcf }
+      | Terminal -> Terminal, game in
     Continue, (stage, game)
   | _ -> Continue, gs
 let print_score_game game =
@@ -103,8 +100,7 @@ let flag_cell game i j =
 (* Draw an ending message and window. *)
 let ending game str =
   draw_field_end game.wcf game.bd;
-  erase_box game.wcf.flag_box;
-  draw_string_in_box Center str game.wcf.flag_box Graphics.black;
+  let game = { game with wcf = set_terminal game.wcf str } in
   Terminal, game
 
 (* Reveal a cell, redrawing and returning the new minesweeper state. *)
@@ -130,13 +126,9 @@ let d_mouse gs click =
        if cell.seen || cell.flag then gs
        else if cell.mined then ending game "LOST"
        else reveal game i j
-    | Mining, SelectBox ->
-       draw_flag_switch game.wcf true;
-       Flagging, game
+    | Mining, SelectBox -> Flagging, { game with wcf = set_flagging game.wcf }
     | Flagging, Cell (i, j) -> flag_cell game i j
-    | Flagging, SelectBox ->
-       draw_flag_switch game.wcf false;
-       Mining, game
+    | Flagging, SelectBox -> Mining, { game with wcf = set_mining game.wcf }
     | _, Out -> gs in
   Continue, gs'
 

@@ -1,4 +1,5 @@
-(* MineGraph defines the minesweeper game's graphics primitives. *)
+(* MineGraph defines the minesweeper game's graphics primitives.
+ * TODO add general (i.e., structure, etc.) docs here and in other files. *)
 
 open Mine_model
 open Util
@@ -26,23 +27,22 @@ let h6 = w5 + 2*b0 ;;
 type relief = Top | Bot | Flat
 
 type box_config =
-    (* (x, y) location, (w, h) size, 'bw' border width, 'r' relief type,
+    (* (x, y) location, (w, h) size, 'bw' border width, 'r' relief
      * {light, shade, col} are various colors for relief illusion.
      * See illustration in 'draw_box' for interaction between fields. *)
-    { x:int; y:int; w:int; h:int; bw:int
-    ; mutable r:relief
+    { x:int; y:int; w:int; h:int; bw:int; r:relief
     ; light:Graphics.color
     ; shade:Graphics.color
     ; box_col:Graphics.color}
 
 (* Draws rectangle outline *)
 let draw_rect x0 y0 w h =
-  let (a,b) = Graphics.current_point()
-  and x1 = x0 + w and y1 = y0 + h in
-     Graphics.moveto x0 y0;
-     Graphics.lineto x0 y1; Graphics.lineto x1 y1;
-     Graphics.lineto x1 y0; Graphics.lineto x0 y0;
-     Graphics.moveto a b;;
+  let a, b = Graphics.current_point() in
+  let x1, y1 = x0 + w, y0 + h in
+  Graphics.moveto x0 y0;
+  Graphics.lineto x0 y1; Graphics.lineto x1 y1;
+  Graphics.lineto x1 y0; Graphics.lineto x0 y0;
+  Graphics.moveto a b
 
 (* Draw the outline for a box with color 'col'. *)
 let draw_box_outline bcf col =
@@ -104,54 +104,44 @@ type window_config =
     ; d1_box : box_config
     ; d2_box : box_config
     ; flag_box : box_config
-    ; mutable current_box : box_config
-    ; cell : int*int -> (int*int)
-    ; coor : int*int -> (int*int) }
+    ; flag_text : string * Graphics.color
+    ; title_text : string
+    ; cell : int * int -> (int * int)
+    ; coor : int * int -> (int * int) }
+
+let gray1, gray2, gray3 =
+  let set_gray x = Graphics.rgb x x x in
+  set_gray 100, set_gray 170, set_gray 240
 
 (* Creates a default-colored box of the specified dimensions *)
 let make_box x y w h bw r =
-  let set_gray x = Graphics.rgb x x x in
-  let gray1, gray2, gray3 = set_gray 100, set_gray 170, set_gray 240 in
   { x=x; y=y; w=w; h=h; bw=bw; r=r; light=gray1; shade=gray3; box_col=gray2 }
 
 (* Creates a default-sized window configuration given a game config *)
 let make_wcf cf =
-  let wcols = b0 + cf.ncols*w4 + b0 in
-  let hrows = b0 + cf.nrows*h5 + b0 in
+  let wcols = b0 + cf.ncols * w4 + b0 in
+  let hrows = b0 + cf.nrows * h5 + b0 in
   let gw = (b0 + w1 + wcols + w2 + b0) in
   let gh = (b0 + h1 + hrows + h2 + h3 + h4 + b0) in
   let main_box =  make_box 0 0 gw gh b0 Top in
   let field_box = make_box w1 h1 wcols hrows b0 Bot in
   let dialog_box = make_box ((main_box.w - w3) / 2)
-                            (b0+h1+hrows+h2)
+                            (b0 + h1 + hrows + h2)
                             w3 h3 b0 Bot in
   let d1_box = make_box (dialog_box.x + b0) (b0 + h1 + hrows + h2)
-                        ((w3-w5)/2-(2*b0)) (h3-(2*b0)) 5 Flat in
+                        ((w3 - w5) / 2 - 2 * b0) (h3- 2 * b0) 5 Flat in
   let flag_box = make_box (d1_box.x + d1_box.w)
-                          (d1_box.y + (h3-h6) / 2) w5 h6 b0 Top in
+                          (d1_box.y + (h3 - h6) / 2) w5 h6 b0 Top in
   let d2_box = make_box (flag_box.x + flag_box.w)
                         d1_box.y d1_box.w d1_box.h 5 Flat in
-  let current_box = make_box 0 0 w4 h5 b0 Top in
   { cf = cf; main_box = main_box; field_box = field_box
   ; dialog_box = dialog_box; d1_box = d1_box; flag_box = flag_box
-  ; d2_box = d2_box; current_box = current_box
+  ; flag_text = ("OFF", Graphics.blue); d2_box = d2_box
+  ; title_text = "Mining"
   ; cell = begin fun (i,j) -> (w1 + b0 + w4 * i, h1 + b0 + h5 * j) end
   ; coor = begin fun (x,y) -> ((x - w1) / w4, (y - h1) / h5) end }
 
-let close_ccell wcf i j =
-  let x,y = wcf.cell (i,j) in
-  wcf.current_box <- {wcf.current_box with x=x; y=y; r=Top}
-
-let open_ccell wcf i j =
-  let x,y = wcf.cell (i,j)
-  in wcf.current_box <- {wcf.current_box with x=x; y=y; r=Flat}
-
-let draw_closed_cc wcf i j =
-  close_ccell wcf i j;
-  draw_box wcf.current_box
-
 type position = Left | Center | Right;;
-
 let draw_string_in_box pos str bcf col =
   let (w, h) = Graphics.text_size str in
   let ty = bcf.y + (bcf.h-h)/2 in
@@ -162,27 +152,28 @@ let draw_string_in_box pos str bcf col =
   Graphics.set_color col;
   Graphics.draw_string str
 
-let draw_num_cc wcf i j n =
-  open_ccell wcf i j ;
-  draw_box wcf.current_box ;
-  if n <> 0 then draw_string_in_box Center (string_of_int n)
-                                    wcf.current_box Graphics.white
+(* 'cc' is short for cell's box_config
+ * Note the following functions draw the various types of different mined
+ * cells. *)
 
-let draw_mine_cc wcf i j =
-  open_ccell wcf i j;
-  let cc = wcf.current_box in
-  draw_box wcf.current_box;
+let draw_num_cc cc n =
+  draw_box cc;
+  if n <> 0 then draw_string_in_box Center (string_of_int n) cc Graphics.white
+  else ()
+
+let draw_flag_cc cc =
+  draw_box cc;
+  draw_string_in_box Center "!" cc Graphics.blue
+
+let draw_mine_cc cc =
+  draw_box cc;
   Graphics.set_color Graphics.black;
   Graphics.fill_circle (cc.x + cc.w/2) (cc.y + cc.h/2) (cc.h / 3)
 
-let draw_flag_cc wcf i j =
-  close_ccell wcf i j;
-  draw_box wcf.current_box;
-  draw_string_in_box Center "!" wcf.current_box Graphics.blue
-
-let draw_cross_cc wcf i j =
-  let x, y = wcf.cell (i, j) in
-  let w, h = wcf.current_box.w, wcf.current_box.h in
+(* Does not redraw cell itself, just adds a cross. *)
+let draw_cross_cc cc =
+  let x, y = cc.x, cc.y in
+  let w, h = cc.w, cc.h in
   let a = x + w / 4 and b = x + 3 * w / 4 in
   let c = y + h / 4 and d = y + 3 * h / 4 in
   Graphics.set_color Graphics.red;
@@ -191,35 +182,80 @@ let draw_cross_cc wcf i j =
   Graphics.moveto a c; Graphics.lineto b d;
   Graphics.set_line_width 1
 
+(* Returns the box_config for a cell at position (i, j) with relief r. *)
+let mine_cell_cfg wcf i j r =
+  let x, y = wcf.cell (i, j) in
+  make_box x y w4 h5 b0 r
+
+(* Draws a cell at position (i, j) according to its state as specified by the
+ * parameter board. *)
 let draw_cell wcf bd i j =
   let cell = bd.(i).(j) in
+  let cc = mine_cell_cfg wcf i j in
   match cell.flag, cell.seen, cell.mined with
-  | true, _, _ -> draw_flag_cc wcf i j
-  | _, false,_ -> draw_closed_cc wcf i j
-  | _, _, true -> draw_mine_cc wcf i j
-  | _ -> draw_num_cc wcf i j cell.nbrs ;;
+  | true, _, _ -> draw_flag_cc @@ cc Top
+  | _, false,_ -> draw_box @@ cc Top
+  | _, _, true -> draw_mine_cc @@ cc Flat
+  | _ -> draw_num_cc (cc Flat) cell.nbrs ;;
 
+(* Draws a cell at position (i, j) according to its state as specified by the
+ * parameter board, but under the context of the ended game, where all the
+ * positions are in a "revealed" state. *)
 let draw_cell_end wcf bd i j =
   let cell = bd.(i).(j) in
-  match (cell.flag, cell.mined ) with
-  | true, true -> draw_flag_cc wcf i j
-  | true, false -> draw_num_cc wcf i j cell.nbrs; draw_cross_cc wcf i j
-  | false, true -> draw_mine_cc wcf i j
-  | false, false -> draw_num_cc wcf i j cell.nbrs
+  let cc = mine_cell_cfg wcf i j in
+  match cell.flag, cell.mined with
+  | true, true -> draw_flag_cc @@ cc Top
+  | true, false ->
+     let cc = cc Flat in draw_num_cc cc cell.nbrs; draw_cross_cc cc
+  | false, true -> draw_mine_cc @@ cc Flat
+  | false, false -> draw_num_cc (cc Flat) cell.nbrs
 
-let draw_flag_switch wcf on =
-  if on then wcf.flag_box.r <- Bot else wcf.flag_box.r <- Top;
+(* Redraws sub-components of the graphics utilities *)
+let draw_flag_switch wcf =
   draw_box wcf.flag_box;
-  if on then draw_string_in_box Center "ON" wcf.flag_box Graphics.red
-  else draw_string_in_box Center "OFF" wcf.flag_box Graphics.blue
+  let txt, col = wcf.flag_text in
+  draw_string_in_box Center txt wcf.flag_box col
 
-let draw_flag_title wcf =
-  let m = "Flagging" in
-  let w,h = Graphics.text_size m in
+let erase_title wcf =
+  let w, h = Graphics.text_size wcf.title_text in
   let x = (wcf.main_box.w - w) / 2 in
   let y0 = wcf.dialog_box.y + wcf.dialog_box.h in
-  let y = y0 + (wcf.main_box.h - (y0 + h)) / 2
-  in Graphics.moveto x y; Graphics.draw_string m
+  let y = y0 + (wcf.main_box.h - (y0 + h)) / 2 in
+  Graphics.set_color gray2;
+  Graphics.fill_rect x y (x + w) (y + h)
+
+let draw_title wcf =
+  Graphics.set_color Graphics.black;
+  let w, h = Graphics.text_size wcf.title_text in
+  let x = (wcf.main_box.w - w) / 2 in
+  let y0 = wcf.dialog_box.y + wcf.dialog_box.h in
+  let y = y0 + (wcf.main_box.h - (y0 + h)) / 2 in
+  Graphics.moveto x y; Graphics.draw_string wcf.title_text
+
+(* The following methods update the selection box according to the desired
+ * window configuration state. Triggers a redraw. *)
+(* TODO: to be completely correct the graphics module shouldn't even distinguish
+ * between flagging/mining/terminal states and really there should just be a
+ * global function that updates flag/title text generically, but this is
+ * more convenient (if less orthogonal in the classic MVC sense) for now. *)
+let update_wcf wcf wcf' =
+  erase_title wcf;
+  draw_flag_switch wcf';
+  draw_title wcf';
+  wcf'
+let set_flagging wcf = update_wcf wcf @@
+  { wcf with flag_box = { wcf.flag_box with r = Bot }
+           ; flag_text = ("ON", Graphics.red)
+           ; title_text = "Flagging" }
+let set_mining wcf = update_wcf wcf @@
+  { wcf with flag_box = { wcf.flag_box with r = Top }
+           ; flag_text = ("OFF", Graphics.blue)
+           ; title_text = "Mining" }
+let set_terminal wcf str = update_wcf wcf @@
+  { wcf with flag_box = { wcf.flag_box with r = Flat }
+           ; flag_text = (str, Graphics.black)
+           ; title_text = "Game Over" }
 
 let print_score wcf nbcto nbfc =
   erase_box wcf.d1_box;
@@ -233,23 +269,22 @@ let iter_cells cf f =
   for i=0 to cf.ncols-1 do for j=0 to cf.nrows-1 do f (i,j) done done ;;
 
 let draw_field_initial wcf =
-  draw_closed_cc wcf 0 0;
-  let cc = wcf.current_box in
+  let cc = mine_cell_cfg wcf 0 0 Top in
   let bitmap = draw_box cc; Graphics.get_image cc.x cc.y cc.w cc.h in
-  let draw_bitmap (i,j) =
+  let draw_bitmap (i, j) =
     let x, y = wcf.cell (i, j) in Graphics.draw_image bitmap x y in
   iter_cells wcf.cf draw_bitmap ;;
 
 let draw_field_end wcf bd =
   iter_cells wcf.cf @@ fun (i, j) -> draw_cell_end wcf bd i j
 
-let open_wcf wcf =
+let open_fresh_wcf wcf =
   Graphics.open_graph @@
     " " ^ (string_of_int wcf.main_box.w) ^ "x" ^ (string_of_int wcf.main_box.h);
   draw_box wcf.main_box;
   draw_box wcf.dialog_box;
-  draw_flag_switch wcf false;
+  draw_flag_switch wcf;
   draw_box wcf.field_box;
   draw_field_initial wcf;
-  draw_flag_title wcf;
+  draw_title wcf;
   print_score wcf (wcf.cf.nrows * wcf.cf.ncols - wcf.cf.nmines) 0
