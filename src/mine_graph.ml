@@ -223,7 +223,7 @@ let erase_title wcf =
   let y0 = wcf.dialog_box.y + wcf.dialog_box.h in
   let y = y0 + (wcf.main_box.h - (y0 + h)) / 2 in
   Graphics.set_color gray2;
-  Graphics.fill_rect x y (x + w) (y + h)
+  Graphics.fill_rect x y w h
 
 let draw_title wcf =
   Graphics.set_color Graphics.black;
