@@ -3,12 +3,8 @@ Brushing up on my OCaml
 
 ### TODO
 
-1. New files (have a graphics / control / model file layout)
-2. Make cooler features:
-
-  * right-click to flag
-  * reset button instead of toggling flag mode
-
+1. Purify the graphics module
+2. Clear up other todos
 3. Change building scheme (what does Jane Street use?)
 4. Add unit tests, just to show off
 
